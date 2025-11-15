@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Resume Crafter</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="black-bg">
+    <div class="center-container">
+        <h2 class="white-text">Welcome, {{ user_type.capitalize() }}!</h2>
+        <div class="white-text" style="margin-bottom:2rem;">
+            {% if user_type == 'student' %}
+                <p>Get started with your first resume. Highlight your education, projects, and skills!</p>
+            {% elif user_type == 'intern' %}
+                <p>Build a resume to land your dream internship. Focus on relevant coursework and experiences!</p>
+            {% elif user_type == 'professional' %}
+                <p>Showcase your professional achievements and skills for your next career move!</p>
+            {% endif %}
+        </div>
+        <div class="resume-builder">
+            <h3 class="white-text">AI Resume Builder</h3>
+            <form method="POST" action="#" onsubmit="event.preventDefault(); generateResume();">
+                <textarea id="resumeInput" class="input-field" rows="6" placeholder="Describe your background, skills, and goals..."></textarea><br>
+                <button type="submit" class="white-btn">Generate Resume</button>
+            </form>
+            <div id="resumeOutput" class="a4-sheet" style="margin-top:2rem;"></div>
+            <button id="editResumeBtn" class="white-btn" style="display:none; margin-top:1rem;">Edit</button>
+            <button id="downloadPdfBtn" class="white-btn" style="display:none; margin-top:1rem;">Download as PDF</button>
+        </div>
+    </div>
+    <script>
+        function generateResume() {
+            const input = document.getElementById('resumeInput').value;
+            fetch('/generate_resume', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ input: input })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const errorMsg = 'Please provide a more relevant background for your resume.';
+                const categoryErrorPrefix = 'You have selected the ';
+                const categoryErrorSuffix = ' category. Please go to the correct category page to generate a resume for a different background.';
+                if (data.resume && data.resume.trim() === errorMsg) {
+                    document.getElementById('resumeOutput').innerHTML = `<span class='error-message'>${errorMsg}</span>`;
+                    document.getElementById('editResumeBtn').style.display = 'none';
+                    document.getElementById('downloadPdfBtn').style.display = 'none';
+                } else if (data.resume && data.resume.trim().startsWith(categoryErrorPrefix) && data.resume.trim().endsWith(categoryErrorSuffix)) {
+                    document.getElementById('resumeOutput').innerHTML = `<span class='error-message'>${data.resume}</span>`;
+                    document.getElementById('editResumeBtn').style.display = 'none';
+                    document.getElementById('downloadPdfBtn').style.display = 'none';
+                } else {
+                    document.getElementById('resumeOutput').innerHTML = data.resume;
+                    document.getElementById('editResumeBtn').style.display = 'inline-block';
+                    document.getElementById('downloadPdfBtn').style.display = 'inline-block';
+                    document.getElementById('resumeOutput').setAttribute('contenteditable', 'false');
+                    document.getElementById('editResumeBtn').textContent = 'Edit';
+                }
+            })
+            .catch(error => {
+                document.getElementById('resumeOutput').innerText = 'Error generating resume.';
+                document.getElementById('editResumeBtn').style.display = 'none';
+                document.getElementById('downloadPdfBtn').style.display = 'none';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const editBtn = document.getElementById('editResumeBtn');
+            const resumeOutput = document.getElementById('resumeOutput');
+            const downloadBtn = document.getElementById('downloadPdfBtn');
+            let editing = false;
+            editBtn.addEventListener('click', function() {
+                if (!editing) {
+                    resumeOutput.setAttribute('contenteditable', 'true');
+                    resumeOutput.focus();
+                    editBtn.textContent = 'Save';
+                    editing = true;
+                } else {
+                    resumeOutput.setAttribute('contenteditable', 'false');
+                    editBtn.textContent = 'Edit';
+                    editing = false;
+                }
+            });
+            downloadBtn.addEventListener('click', function() {
+                // Hide everything except the resumeOutput for printing
+                const originalBody = document.body.innerHTML;
+                const resumeHtml = resumeOutput.outerHTML;
+                document.body.innerHTML = resumeHtml;
+                window.print();
+                document.body.innerHTML = originalBody;
+                window.location.reload(); // reload to restore event listeners
+            });
+        });
+    </script>
+</body>
+</html> 
